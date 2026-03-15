@@ -7,9 +7,22 @@ SkiaMorph (from Ancient Greek _σκιά_ “shadow” and _μορφή_ “shape�
 Most SVG rasterizers use coverage-based anti-aliasing per element: the opacity of a pixel represents how much of that pixel is covered by the element.  
 This works well in many cases, but it breaks down when two shapes meet exactly at a non-pixel-aligned edge, as in the example below:
 
-| Exact SVG                                               | Rendered at 5×5 (normal anti-aliasing)                                   | Rendered at 5×5 (analytic, even supersampling)                      |
-| ------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| <img src="docs/hairline.svg" alt="Exact" width="300" /> | <img src="docs/hairline-antialias.svg" alt="Anti-aliased" width="300" /> | <img src="docs/hairline-analytic.svg" alt="Analytic" width="300" /> |
+<table style="width:100%; table-layout:fixed;">
+  <thead>
+    <tr>
+      <th style="width:33.33%;">Exact SVG</th>
+      <th style="width:33.33%;">Rendered at 5×5 (normal anti-aliasing)</th>
+      <th style="width:33.33%;">Rendered at 5×5 (analytic, even supersampling)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="docs/hairline.svg" alt="Exact" style="width:100%;"></td>
+      <td><img src="docs/hairline-antialias.svg" alt="Anti-aliased" style="width:100%;"></td>
+      <td><img src="docs/hairline-analytic.svg" alt="Analytic" style="width:100%;"></td>
+    </tr>
+  </tbody>
+</table>
 
 In the left SVG (visualized with a black background), we render a 5×5 grid of pixels (indicated by the partially transparent black grid), with a blue rectangle in the upper half and a yellow rectangle in the lower half (a square version of the Ukrainian flag).
 The five pixels in the middle row are half blue and half yellow, i.e. each rectangle has 50% coverage in those pixels.
@@ -54,7 +67,7 @@ The core pipeline looks like this:
   - bounding boxes,
   - resolved colour and opacity for `<path>`,
   - decoded image data and sampling transforms for `<image>`,
-  
+
   while taking transformations, clip masks, and `<use>` references into account.  
   The result is a compact, back-to-front list of drawable nodes.
 
