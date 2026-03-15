@@ -9,9 +9,9 @@ This works well in many cases, but it breaks down when two shapes meet exactly a
 
 <table>
   <tr>
-    <th style="width: 33.33%">Exact SVG</th>
-    <th style="width: 33.33%">Rendered at 5×5 (normal anti-aliasing)</th>
-    <th style="width: 33.33%">Rendered at 5×5 (analytic, even supersampling)</th>
+    <th style="width: 33%">Exact SVG</th>
+    <th style="width: 33%">Conventional anti-aliasing</th>
+    <th style="width: 33%">Analytic, even supersampling</th>
   </tr>
   <tr>
     <td align="center">
