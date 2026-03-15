@@ -93,7 +93,8 @@ Currently, SkiaMorph supports the following SVG features and has the following l
 
 - **Paths**
   - Only solid `fill` is supported.
-  - `stroke` and related attributes are currently ignored, though basic stroking is very likely to be the next feature added.
+  - `stroke` and related attributes (apart from dashing) are supported, although Skia’s analytic stroking (which SkiaMorph’s implementation is based on) is very incomplete and sometimes buggy.
+  - Gradients and other advanced paint features are not supported.
 
 - **Images**
   - Only inline images (`data:…` URLs) using PNG or WEBP are supported at the moment (additional formats may be added later).
@@ -137,7 +138,7 @@ meson compile -C build
 
 > [!IMPORTANT]
 > Skia is configured **and compiled** during the Meson setup phase, not during the compilation phase.  
-> If any changes are made to Skia, it is therefore not enough to execute `meson compile`; `meson setup --reconfigure` is required to recompile Skia.
+> If any changes are made to Skia, it is therefore not enough to execute `meson compile`: `meson setup --reconfigure` must be executed to recompile Skia.
 
 ## 📜 Licences
 

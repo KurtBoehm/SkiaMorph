@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path fill="#f00" stroke="#0f0" stroke-width="1" d="M5 5h5v5h-5Z" />
+  <path fill="#0f0" stroke="#f00" stroke-width="2" d="M15 5h5v5h-5Z" />
+  <path fill="#00f" stroke="#f0f" stroke-width="1" stroke-linejoin="round" d="M25 5h5v5h-5Z" />
+  <path fill="#f0f" stroke="#00f" stroke-width="1" stroke-linejoin="bevel" d="M35 5h5v5h-5Z" />
+  <path fill="#ff0" stroke="#0ff" stroke-width="1" d="M45 5a5 5 0 0 1 5 5h-5Z" />
+  <path fill="#0ff" stroke="#ff0" stroke-width="1" stroke-linejoin="round" d="M55 5a5 5 0 0 1 5 5h-5Z" />
+  <path fill="#f00" stroke="#0f0" stroke-width="1" stroke-linejoin="bevel" d="M65 5a5 5 0 0 1 5 5h-5Z" />
+
+  <path fill="#f00" stroke="#0f0" stroke-width="1" d="M5 15h5v5h-5" />
+  <path fill="#0f0" stroke="#f00" stroke-width="2" d="M15 15h5v5h-5" />
+  <path fill="#00f" stroke="#f0f" stroke-width="1" stroke-linecap="round" d="M25 15h5v5h-5" />
+  <path fill="#f0f" stroke="#00f" stroke-width="1" stroke-linecap="square" d="M35 15h5v5h-5" />
+  <path fill="#ff0" stroke="#0ff" stroke-width="1" d="M45 15a5 5 0 0 1 5 5h-5" />
+  <path fill="#0ff" stroke="#ff0" stroke-width="1" stroke-linecap="round" d="M55 15a5 5 0 0 1 5 5h-5" />
+  <path fill="#f00" stroke="#0f0" stroke-width="1" stroke-linecap="square" d="M65 15a5 5 0 0 1 5 5h-5" />
+</svg>

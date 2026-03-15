@@ -30,6 +30,7 @@
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -49,8 +50,10 @@
 #include "include/core/SkData.h"
 #include "include/core/SkImage.h"
 #include "include/core/SkImageInfo.h"
+#include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkPathBuilder.h"
+#include "include/core/SkPathUtils.h"
 #include "include/core/SkPoint.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkRefCnt.h"
@@ -119,13 +122,13 @@ struct Path {
   std::vector<ClipMask> clips = init_required;
 
   // Resolved fill and effective opacity in [0,1]
-  SkColor fill_color = init_required;
-  SkScalar fill_opacity = init_required;
+  SkColor color = init_required;
+  SkScalar opacity = init_required;
 
-  // Premultiplied components (w.r.t fill_opacity)
-  SkScalar premul_r = SkColorGetR(fill_color) * inv255 * fill_opacity;
-  SkScalar premul_g = SkColorGetG(fill_color) * inv255 * fill_opacity;
-  SkScalar premul_b = SkColorGetB(fill_color) * inv255 * fill_opacity;
+  // Premultiplied components (w.r.t opacity)
+  SkScalar premul_r = SkColorGetR(color) * inv255 * opacity;
+  SkScalar premul_g = SkColorGetG(color) * inv255 * opacity;
+  SkScalar premul_b = SkColorGetB(color) * inv255 * opacity;
 };
 
 struct Image {
@@ -264,6 +267,56 @@ std::pair<SkColor, SkScalar> resolve_fill_and_opacity(const SkSVGNode& node,
   return {color, opacity};
 }
 
+// Resolve stroke color, width, and effective opacity (stroke-opacity * opacity * parent_opacity).
+struct StrokeStyle {
+  SkColor color = SK_ColorTRANSPARENT;
+  SkScalar opacity = 0;
+  SkScalar width = 0;
+  SkSVGLineJoin line_join{SkSVGLineJoin::Type::kMiter};
+  SkScalar miter_limit = 4;
+  SkSVGLineCap line_cap{SkSVGLineCap::kButt};
+};
+
+StrokeStyle resolve_stroke_style(const SkSVGPath& node, SkScalar parent_opacity) {
+  StrokeStyle s{.opacity = parent_opacity};
+
+  if (auto stroke_opacity = get(node.getStrokeOpacity())) {
+    s.opacity *= *stroke_opacity;
+  }
+  if (auto node_opacity = get(node.getOpacity())) {
+    s.opacity *= *node_opacity;
+  }
+
+  if (auto stroke = get(node.getStroke())) {
+    if (stroke->type() == SkSVGPaint::Type::kColor) {
+      s.color = stroke->color().color();
+    } else if (stroke->type() == SkSVGPaint::Type::kNone) {
+      s.opacity = 0;
+      return s;
+    }
+  }
+
+  if (auto w = get(node.getStrokeWidth())) {
+    s.width = w->value();
+  }
+  if (s.width <= 0) {
+    s.opacity = 0;
+    return s;
+  }
+
+  if (auto line_join = get(node.getStrokeLineJoin())) {
+    s.line_join = *line_join;
+  }
+  if (auto miter_limit = get(node.getStrokeMiterLimit())) {
+    s.miter_limit = *miter_limit;
+  }
+  if (auto line_cap = get(node.getStrokeLineCap())) {
+    s.line_cap = *line_cap;
+  }
+
+  return s;
+}
+
 // -----------------------------------------------------------------------------
 // Geometry extraction
 // -----------------------------------------------------------------------------
@@ -353,19 +406,50 @@ struct Collector {
           return;
         }
 
-        const auto [fill_color, fill_opacity] = resolve_fill_and_opacity(path_node, parent_opacity);
-        if (fill_opacity <= 0) {
-          return;
+        // Fill
+        if (const auto [fill_color, fill_opacity] =
+              resolve_fill_and_opacity(path_node, parent_opacity);
+            fill_opacity > 0) {
+          out_nodes.push_back(Path{
+            .path = path,
+            .bounds = bounds,
+            .node = &path_node,
+            .clips = clips,
+            .color = fill_color,
+            .opacity = fill_opacity,
+          });
         }
 
-        out_nodes.push_back(Path{
-          .path = std::move(path),
-          .bounds = bounds,
-          .node = &path_node,
-          .clips = clips,
-          .fill_color = fill_color,
-          .fill_opacity = fill_opacity,
-        });
+        // Stroke
+        if (auto stroke = resolve_stroke_style(path_node, parent_opacity); stroke.opacity > 0) {
+          SkPaint paint{};
+          paint.setStyle(SkPaint::kStroke_Style);
+          paint.setStrokeWidth(stroke.width);
+          switch (stroke.line_join.type()) {
+            case SkSVGLineJoin::Type::kRound: paint.setStrokeJoin(SkPaint::kRound_Join); break;
+            case SkSVGLineJoin::Type::kBevel: paint.setStrokeJoin(SkPaint::kBevel_Join); break;
+            default: paint.setStrokeJoin(SkPaint::kMiter_Join); break;
+          }
+          paint.setStrokeMiter(stroke.miter_limit);
+          switch (stroke.line_cap) {
+            case SkSVGLineCap::kRound: paint.setStrokeCap(SkPaint::kRound_Cap); break;
+            case SkSVGLineCap::kSquare: paint.setStrokeCap(SkPaint::kSquare_Cap); break;
+            default: paint.setStrokeCap(SkPaint::kButt_Cap); break;
+          }
+
+          SkPathBuilder pb{};
+          if (!skpathutils::FillPathWithPaint(path, paint, &pb)) {
+            throw std::runtime_error{"stroking failed!"};
+          }
+          out_nodes.push_back(Path{
+            .path = pb.detach(),
+            .bounds = bounds,
+            .node = &path_node,
+            .clips = clips,
+            .color = stroke.color,
+            .opacity = stroke.opacity,
+          });
+        }
         break;
       }
 
@@ -532,8 +616,8 @@ inline Rgba compute_sample_color_for_list(const std::vector<NodeInfo>& nodes,
   const Tile& tile = tiles[ty * tiles_x + tx];
 
   for (std::size_t i : tile.node_indices | std::views::reverse) {
-    // Filled path
-    auto op_filled = [&](const Path& p) {
+    // Filled/stroked path
+    auto op_path = [&](const Path& p) {
       if (!p.bounds.contains(x, y)) {
         return;
       }
@@ -553,7 +637,7 @@ inline Rgba compute_sample_color_for_list(const std::vector<NodeInfo>& nodes,
       out.r += p.premul_r * inv_front_a;
       out.g += p.premul_g * inv_front_a;
       out.b += p.premul_b * inv_front_a;
-      out.a += p.fill_opacity * inv_front_a;
+      out.a += p.opacity * inv_front_a;
     };
     // <image>
     auto op_image = [&](const Image& img) {
@@ -627,7 +711,7 @@ inline Rgba compute_sample_color_for_list(const std::vector<NodeInfo>& nodes,
       out.b += b * inv_front_a;
       out.a += a * inv_front_a;
     };
-    std::visit(Overloaded{op_filled, op_image}, nodes[i]);
+    std::visit(Overloaded{op_path, op_image}, nodes[i]);
 
     if (out.a >= SkScalar(0.999)) {
       out.a = 1;
