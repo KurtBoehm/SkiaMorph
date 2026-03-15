@@ -25,10 +25,10 @@ This works well in many cases, but it breaks down when two shapes meet exactly a
 </table>
 
 In the left SVG (visualized with a black background), we render a 5×5 grid of pixels (indicated by the partially transparent black grid), with a blue rectangle in the upper half and a yellow rectangle in the lower half (a square version of the Ukrainian flag).
-The five pixels in the middle row are half blue and half yellow, i.e. each rectangle has 50% coverage in those pixels.
+The five pixels in the middle row are half blue and half yellow: each rectangle has 50% coverage in those pixels.
 
 With conventional coverage-based anti-aliasing, these shapes are rasterized independently for performance reasons.
-The yellow rectangle (drawn later) contributes 50% of the final colour, and the remaining 50% is split evenly between blue and the background (black), as seen in the middle column.
+The yellow rectangle (drawn last) contributes 50% of the final colour, and the remaining 50% is split evenly between blue and the background (black), as seen in the middle column.
 Per-pixel coverage cannot distinguish _where_ within the pixel a shape lies, or which regions overlap: two shapes with 50% coverage each might not overlap at all (as here), might overlap completely, or anything in between.
 As a result, background colour “leaks” into pixels that should be fully covered.
 
@@ -71,7 +71,7 @@ The core pipeline looks like this:
   while taking transformations, clip masks, and `<use>` references into account.  
   The result is a compact, back-to-front list of drawable nodes.
 
-- **Tiling / acceleration structures**  
+- **Tiling / acceleration structures**:  
   The `viewBox` is divided into a fixed grid of tiles.
   Each node is registered in all tiles intersecting its bounding box.
   During sampling, only the nodes in the corresponding tile are tested, dramatically reducing the number of containment tests per sample.
@@ -128,9 +128,14 @@ A simple build workflow looks like this:
 ```bash
 meson setup --buildtype release build
 meson compile -C build
+
 # Render input.svg to output.png at 1024×1024 with 4×4 samples per pixel
 ./build/SkiaMorph input.svg 1024 1024 output.png 4 4
 ```
+
+> [!IMPORTANT]
+> Skia is configured **and compiled** during the Meson setup phase, not during the compilation phase.  
+> If any changes are made to Skia, it is therefore not enough to execute `meson compile`; `meson setup --reconfigure` is required to recompile Skia.
 
 ## 📜 Licences
 
