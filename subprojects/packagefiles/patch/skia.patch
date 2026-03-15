@@ -1,0 +1,138 @@
+diff --git a/modules/svg/include/SkSVGContainer.h b/modules/svg/include/SkSVGContainer.h
+index 491aa46..4252b9b 100644
+--- a/modules/svg/include/SkSVGContainer.h
++++ b/modules/svg/include/SkSVGContainer.h
+@@ -33,6 +33,7 @@ protected:
+ 
+     bool hasChildren() const final;
+ 
++public:
+     template <typename NodeType, typename Func>
+     void forEachChild(Func func) const {
+         for (const auto& child : fChildren) {
+@@ -42,6 +43,14 @@ protected:
+         }
+     }
+ 
++    template <typename Func>
++    void forEachChild(Func func) const {
++        for (const auto& child : fChildren) {
++            func(child.get());
++        }
++    }
++
++protected:
+     // TODO: convert remaining direct users to iterators, and make the container private.
+     skia_private::STArray<1, sk_sp<SkSVGNode>, true> fChildren;
+ 
+diff --git a/modules/svg/include/SkSVGNode.h b/modules/svg/include/SkSVGNode.h
+index bfd056f..0dcb06a 100644
+--- a/modules/svg/include/SkSVGNode.h
++++ b/modules/svg/include/SkSVGNode.h
+@@ -158,6 +158,13 @@ public:
+     SVG_PRES_ATTR(FloodOpacity             , SkSVGNumberType, false)
+     SVG_PRES_ATTR(LightingColor            , SkSVGColor     , false)
+ 
++    const SkString& getId() const {
++      return fId;
++    }
++    void setId(SkString id) {
++      fId = std::move(id);
++    }
++
+ protected:
+     explicit SkSVGNode(SkSVGTag);
+ 
+@@ -187,6 +194,7 @@ protected:
+ 
+ private:
+     SkSVGTag                    fTag;
++    SkString                    fId;
+ 
+     // FIXME: this should be sparse
+     SkSVGPresentationAttributes fPresentationAttributes;
+diff --git a/modules/svg/include/SkSVGTransformableNode.h b/modules/svg/include/SkSVGTransformableNode.h
+index 54dae40..a96a0e5 100644
+--- a/modules/svg/include/SkSVGTransformableNode.h
++++ b/modules/svg/include/SkSVGTransformableNode.h
+@@ -23,6 +23,8 @@ class SK_API SkSVGTransformableNode : public SkSVGNode {
+ public:
+     void setTransform(const SkSVGTransformType& t) { fTransform = t; }
+ 
++    const SkSVGTransformType& getTransform() const { return fTransform; }
++
+ protected:
+     explicit SkSVGTransformableNode(SkSVGTag);
+ 
+diff --git a/modules/svg/src/SkSVGFeImage.cpp b/modules/svg/src/SkSVGFeImage.cpp
+index 6295206..e2a8946 100644
+--- a/modules/svg/src/SkSVGFeImage.cpp
++++ b/modules/svg/src/SkSVGFeImage.cpp
+@@ -19,6 +19,7 @@
+ 
+ bool SkSVGFeImage::parseAndSetAttribute(const char* n, const char* v) {
+     return INHERITED::parseAndSetAttribute(n, v) ||
++           this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("href", n, v)) ||
+            this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("xlink:href", n, v)) ||
+            this->setPreserveAspectRatio(SkSVGAttributeParser::parse<SkSVGPreserveAspectRatio>(
+                    "preserveAspectRatio", n, v));
+diff --git a/modules/svg/src/SkSVGGradient.cpp b/modules/svg/src/SkSVGGradient.cpp
+index 5c563ea..005c4c1 100644
+--- a/modules/svg/src/SkSVGGradient.cpp
++++ b/modules/svg/src/SkSVGGradient.cpp
+@@ -26,6 +26,7 @@ bool SkSVGGradient::parseAndSetAttribute(const char* name, const char* value) {
+     return INHERITED::parseAndSetAttribute(name, value) ||
+            this->setGradientTransform(SkSVGAttributeParser::parse<SkSVGTransformType>(
+                    "gradientTransform", name, value)) ||
++           this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("href", name, value)) ||
+            this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("xlink:href", name, value)) ||
+            this->setSpreadMethod(
+                    SkSVGAttributeParser::parse<SkSVGSpreadMethod>("spreadMethod", name, value)) ||
+diff --git a/modules/svg/src/SkSVGImage.cpp b/modules/svg/src/SkSVGImage.cpp
+index 7e231f8..c7af9f6 100644
+--- a/modules/svg/src/SkSVGImage.cpp
++++ b/modules/svg/src/SkSVGImage.cpp
+@@ -26,6 +26,7 @@ bool SkSVGImage::parseAndSetAttribute(const char* n, const char* v) {
+            this->setY(SkSVGAttributeParser::parse<SkSVGLength>("y", n, v)) ||
+            this->setWidth(SkSVGAttributeParser::parse<SkSVGLength>("width", n, v)) ||
+            this->setHeight(SkSVGAttributeParser::parse<SkSVGLength>("height", n, v)) ||
++           this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("href", n, v)) ||
+            this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("xlink:href", n, v)) ||
+            this->setPreserveAspectRatio(SkSVGAttributeParser::parse<SkSVGPreserveAspectRatio>(
+                    "preserveAspectRatio", n, v));
+diff --git a/modules/svg/src/SkSVGPattern.cpp b/modules/svg/src/SkSVGPattern.cpp
+index b938b9c..3e49d65 100644
+--- a/modules/svg/src/SkSVGPattern.cpp
++++ b/modules/svg/src/SkSVGPattern.cpp
+@@ -29,6 +29,7 @@ bool SkSVGPattern::parseAndSetAttribute(const char* name, const char* value) {
+            this->setHeight(SkSVGAttributeParser::parse<SkSVGLength>("height", name, value)) ||
+            this->setPatternTransform(SkSVGAttributeParser::parse<SkSVGTransformType>(
+                    "patternTransform", name, value)) ||
++           this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("href", name, value)) ||
+            this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("xlink:href", name, value));
+ }
+ 
+diff --git a/modules/svg/src/SkSVGText.cpp b/modules/svg/src/SkSVGText.cpp
+index cbc7748..b404088 100644
+--- a/modules/svg/src/SkSVGText.cpp
++++ b/modules/svg/src/SkSVGText.cpp
+@@ -726,6 +726,7 @@ void SkSVGTextPath::onShapeText(const SkSVGRenderContext& ctx, SkSVGTextContext*
+ 
+ bool SkSVGTextPath::parseAndSetAttribute(const char* name, const char* value) {
+     return INHERITED::parseAndSetAttribute(name, value) ||
++        this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("href", name, value)) ||
+         this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("xlink:href", name, value)) ||
+         this->setStartOffset(SkSVGAttributeParser::parse<SkSVGLength>("startOffset", name, value));
+ }
+diff --git a/modules/svg/src/SkSVGUse.cpp b/modules/svg/src/SkSVGUse.cpp
+index 0a1ce91..e37a502 100644
+--- a/modules/svg/src/SkSVGUse.cpp
++++ b/modules/svg/src/SkSVGUse.cpp
+@@ -23,6 +23,7 @@ bool SkSVGUse::parseAndSetAttribute(const char* n, const char* v) {
+     return INHERITED::parseAndSetAttribute(n, v) ||
+            this->setX(SkSVGAttributeParser::parse<SkSVGLength>("x", n, v)) ||
+            this->setY(SkSVGAttributeParser::parse<SkSVGLength>("y", n, v)) ||
++           this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("href", n, v)) ||
+            this->setHref(SkSVGAttributeParser::parse<SkSVGIRI>("xlink:href", n, v));
+ }
+ 

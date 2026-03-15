@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" viewBox="-10 -10 120 120">
+  <path fill="#000" d="M-10 -10H110V110H-10Z" />
+  <path fill="#0057B7" d="M0 0H100V40H0Z" />
+  <path fill="#0057B7" opacity="0.5" d="M0 40H100V60H0Z" />
+  <path fill="#FFD700" opacity="0.5" d="M0 40H100V60H0Z" />
+  <path fill="#FFD700" d="M0 60H100V100H0Z" />
+  <path stroke="#000" stroke-width="1" opacity="0.25" d="M0 20H100M0 40H100M0 60H100M0 80H100M20 0V100M40 0V100M60 0V100M80 0V100" />
+</svg>

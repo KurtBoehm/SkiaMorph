@@ -1,0 +1,6 @@
+[wrap-git]
+url = https://github.com/google/skia.git
+revision = chrome/m147
+depth = 1
+patch_directory = skia
+diff_files = patch/skia.patch
